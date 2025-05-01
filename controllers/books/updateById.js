@@ -4,9 +4,10 @@ const { RequestError } = require('../../helpers');
 
 const updateById = async (req, res) => {
   const { id } = req.params;
+  const { _id: owner } = req.user;
   const { resume: review, rating } = req.body;
 
-  const result = await Book.findById(id);
+  const result = await Book.findById({ _id: id, owner });
 
   if (!result) {
     throw RequestError(404, 'Not found');
@@ -14,14 +15,12 @@ const updateById = async (req, res) => {
 
   if (result.status === 'done') {
     result.resume = review;
-    resume.rating = rating;
+    result.rating = rating;
     await result.save();
     res.json(result);
   } else {
-    res.json({ message: 'Эта книга еще не прочитана' });
+    res.json({ message: 'This book has not been read yet' });
   }
 };
 
 module.exports = updateById;
-
-//добавить проверку на владельца

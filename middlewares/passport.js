@@ -1,61 +1,56 @@
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const Auth0Strategy = require('passport-auth0');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const jwt = require('jsonwebtoken');
 const { User } = require('../models/user');
 const { userService: services } = require('../services');
+const { RequestError } = require('../helpers');
 
-const googleSettings = {
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://book-reader-backend.herokuapp.com/api/users/google/callback',
+const { SECRET_KEY } = process.env;
+
+const auth0Settings = {
+  domain: process.env.AUTH0_DOMAIN,
+  clientID: process.env.AUTH0_CLIENT_ID,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET,
+  callbackURL: process.env.AUTH0_CALLBACK_URL,
 };
 
 passport.use(
-  'google',
-  new GoogleStrategy(
-    googleSettings,
+  'auth0',
+  new Auth0Strategy(
+    auth0Settings,
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const newUser = {
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          googleId: profile.id,
-        };
+        const { id: auth0Id, displayName, emails } = profile;
+        const email = emails?.[0]?.value;
 
-        User.findOne({ googleId: profile.id }).then(async currentUser => {
-          if (currentUser) {
-            const id = currentUser._id;
-            const payload = { id };
-            const token = jwt.sign(payload, process.env.SECRET_KEY, {
-              expiresIn: '1d',
-            });
+        if (!email) {
+          return done(RequestError(400, 'Email not found in Auth0 profile'));
+        }
 
-            await services.updateToken(id, token);
+        let user = await User.findOne({ auth0Id });
 
-            currentUser.token = token;
-            done(null, currentUser);
-          } else {
-            const result = await new User({
-              ...newUser,
-            }).save();
+        if (!user) {
+          user = await new User({
+            name: displayName,
+            email,
+            auth0Id,
+          }).save();
+        }
 
-            const id = result._id;
-            const payload = { id };
-            const token = jwt.sign(payload, process.env.SECRET_KEY, {
-              expiresIn: '1d',
-            });
-
-            await services.updateToken(id, token);
-
-            result.token = token;
-            done(null, result);
-          }
+        const tokenPayload = { id: user._id };
+        const token = jwt.sign(tokenPayload, SECRET_KEY, {
+          expiresIn: '1d',
         });
+
+        await services.updateToken(user._id, token);
+        user.token = token;
+
+        return done(null, user);
       } catch (error) {
-        done(new Error(error.message));
+        done(RequestError(500, `Auth0 strategy error: ${error.message}`));
       }
     },
   ),
@@ -65,10 +60,13 @@ passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-passport.deserializeUser((id, done) => {
-  User.findById(id).then(user => {
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
     done(null, user);
-  });
+  } catch (err) {
+    done(RequestError(500, 'Failed to deserialize user'));
+  }
 });
 
 module.exports = passport;
