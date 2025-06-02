@@ -40,6 +40,10 @@ app.use('/api/books', booksRouter);
 app.use('/api/training', trainingRouter);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
+app.get('/', (_, res) => {
+  res.status(200).send('✅ Book Reader backend is running');
+});
+
 app.use((_, res) => {
   res.status(404).json({ message: 'Not found' });
 });
