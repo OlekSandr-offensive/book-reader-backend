@@ -6,10 +6,11 @@ const moment = require('moment');
 const statistic = async (req, res) => {
   const { _id: owner } = req.user;
   const { id } = req.params;
-  const { factDate, pages } = req.body;
+  const { bookId, factDate, pages } = req.body;
 
   const time = moment().format('HH:mm:ss');
-  const training = await Training.findOne({ _id: id });
+  const training = await Training.findOne({ _id: id, owner });
+  if (!training) throw RequestError(404, `Training with id=${id} not found`);
 
   const finish = training.finishDate;
   const currentDate = moment().format('yyyy.MM.DD');
@@ -41,52 +42,40 @@ const statistic = async (req, res) => {
     });
   }
 
-  let book;
-
-  for (let i = 0; i < training.books.length; ) {
-    const el = await Book.findById(training.books[i]);
-    if (el.status === 'done') {
-      i++;
-      continue;
-    } else {
-      book = el;
-      break;
-    }
+  if (!training.books.includes(bookId)) {
+    throw RequestError(
+      400,
+      `Book with id=${bookId} is not part of this training`,
+    );
   }
 
-  const thisBook = await Book.findById(book);
+  const thisBook = await Book.findById({ _id: bookId, owner });
+  if (!thisBook) throw RequestError(404, `Book with id=${bookId} not found`);
   thisBook.readPages += pages;
-  const diffPages = Math.round(thisBook.totalPages - thisBook.readPages);
+  const diffPages = thisBook.totalPages - thisBook.readPages;
   if (pages > thisBook.totalPages || diffPages < 0) {
     throw RequestError(400, `Inserted pages can't be more than pages in book`);
   }
   if (thisBook.readPages >= thisBook.totalPages) {
     thisBook.status = 'done';
   }
-  thisBook.save();
+  await thisBook.save();
 
-  const sumPages = Math.round(training.factPages + pages);
-  const result = await Training.findOneAndUpdate(
-    { _id: id, owner },
+  training.factPages += pages;
+  const updatedTraining = await training.save();
 
-    {
-      factPages: sumPages,
-      dateNow: training.dateNow,
-    },
-    { new: true },
-  );
-  if (!result) {
-    throw RequestError(404, `training with id=${id} not found`);
-  }
+  const booksInTraining = await Book.find({ _id: { $in: training.books } });
+  const allBooksDone = booksInTraining.every(book => book.status === 'done');
+
   if (diff > 0) {
-    await Training.findById({ _id: id });
-    res.json(diffPages);
-  } else if (result.totalPages === result.factPages) {
-    res.status(200).json({ message: 'My greetings' });
-    await Training.deleteOne({ _id: id });
-  } else {
-    res.status(201).json(result);
+    return res.json(diffPages);
   }
+  if (allBooksDone) {
+    await Training.deleteOne({ _id: id });
+    return res.status(200).json({ message: 'Training completed' });
+  }
+
+  return res.status(201).json(updatedTraining);
 };
 
 module.exports = statistic;
