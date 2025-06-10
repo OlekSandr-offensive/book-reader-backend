@@ -83,7 +83,6 @@ const addSchema = Joi.object({
 const statisticTrainingSchema = Joi.object({
   factDate: Joi.string().required(),
   pages: Joi.number().required(),
-  time: Joi.string().required(),
   bookId: Joi.string().hex().length(24).required(),
 });
 
