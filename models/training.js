@@ -3,6 +3,29 @@ const Joi = require('joi');
 
 const { handleSchemaValidationErrors } = require('../helpers');
 
+const dateNowSubSchema = new Schema(
+  {
+    factDate: {
+      type: String,
+      required: true,
+    },
+    time: {
+      type: String,
+      required: true,
+    },
+    pages: {
+      type: Number,
+      required: true,
+    },
+    bookId: {
+      type: Schema.Types.ObjectId,
+      ref: 'book',
+      required: true,
+    },
+  },
+  { _id: false },
+);
+
 const trainingSchema = new Schema(
   {
     startDate: {
@@ -13,7 +36,6 @@ const trainingSchema = new Schema(
       type: String,
       required: [true, 'Set end date for training'],
     },
-
     inProgress: {
       type: Boolean,
       default: true,
@@ -29,27 +51,22 @@ const trainingSchema = new Schema(
       ref: 'user',
       required: true,
     },
-    date: {
-      type: String,
-    },
     plannedPages: {
-      type: String,
+      type: Number,
       default: 0,
     },
     factPages: {
       type: Number,
       default: 0,
     },
-
     dateNow: {
-      type: Array,
+      type: [dateNowSubSchema],
       default: [],
     },
     totalPages: {
       type: Number,
     },
   },
-
   { versionKey: false, timestamps: true },
 );
 
@@ -59,12 +76,15 @@ const addSchema = Joi.object({
   startDate: Joi.string().required(),
   finishDate: Joi.string().required(),
   inProgress: Joi.bool(),
+  books: Joi.array().items(Joi.string().hex().length(24)),
+  plannedPages: Joi.number(),
 });
 
 const statisticTrainingSchema = Joi.object({
   factDate: Joi.string().required(),
   pages: Joi.number().required(),
-  time: Joi.array(),
+  time: Joi.string().required(),
+  bookId: Joi.string().hex().length(24).required(),
 });
 
 const schemasTraining = {
