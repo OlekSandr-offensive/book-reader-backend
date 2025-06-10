@@ -23,7 +23,7 @@ const statistic = async (req, res) => {
 
   if (training.dateNow.length !== 0) {
     date = training.dateNow[training.dateNow.length - 1];
-    if (factDate === date.factDate) {
+    if (factDate === date.factDate && String(date.bookId) === String(bookId)) {
       date.factDate = factDate;
       date.time = time;
       date.pages += pages;
@@ -32,6 +32,7 @@ const statistic = async (req, res) => {
         factDate: factDate,
         time: time,
         pages: pages,
+        bookId: bookId,
       });
     }
   } else {
@@ -39,6 +40,7 @@ const statistic = async (req, res) => {
       factDate: factDate,
       time: time,
       pages: pages,
+      bookId: bookId,
     });
   }
 
