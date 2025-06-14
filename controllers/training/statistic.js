@@ -8,6 +8,10 @@ const statistic = async (req, res) => {
   const { id } = req.params;
   const { bookId, factDate, pages } = req.body;
 
+  if (pages < 1) {
+    throw RequestError(400, 'Pages must be greater than 0');
+  }
+
   const time = moment().format('HH:mm:ss');
   const training = await Training.findOne({ _id: id, owner });
   if (!training) throw RequestError(404, `Training with id=${id} not found`);
@@ -66,12 +70,15 @@ const statistic = async (req, res) => {
   training.factPages += pages;
   const updatedTraining = await training.save();
 
-  const booksInTraining = await Book.find({ _id: { $in: training.books } });
+  const booksInTraining = await Book.find({
+    _id: { $in: updatedTraining.books },
+  });
   const allBooksDone = booksInTraining.every(book => book.status === 'done');
 
   if (diff > 0) {
     return res.json(diffPages);
   }
+
   if (allBooksDone) {
     await Training.deleteOne({ _id: id });
     return res.status(200).json({ message: 'Training completed' });
