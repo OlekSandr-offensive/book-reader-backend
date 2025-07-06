@@ -16,12 +16,14 @@ const statistic = async (req, res) => {
   const training = await Training.findOne({ _id: id, owner });
   if (!training) throw RequestError(404, `Training with id=${id} not found`);
 
-  const finish = training.finishDate;
+  const { finishDate } = training;
   const currentDate = moment().format('yyyy.MM.DD');
+  const finishTrainingDate = moment(finishDate);
+  const currentMomentStartOfDay = moment().startOf('day');
 
   const start = moment(currentDate.replace(/[.]/g, ''));
 
-  const diff = start.diff(finish, 'days');
+  const diff = start.diff(finishDate, 'days');
 
   let date;
 
@@ -77,6 +79,13 @@ const statistic = async (req, res) => {
 
   if (diff > 0) {
     return res.json(diffPages);
+  }
+
+  if (currentMomentStartOfDay.isAfter(finishTrainingDate.endOf('day'))) {
+    await Training.deleteOne({ _id: id });
+    return res.status(200).json({
+      message: 'Time is up, training is over',
+    });
   }
 
   if (allBooksDone) {
