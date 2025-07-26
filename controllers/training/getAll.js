@@ -1,4 +1,5 @@
 const { Training } = require('../../models/training');
+const { Book } = require('../../models/book');
 const moment = require('moment');
 
 const getAll = async (req, res) => {
@@ -16,7 +17,14 @@ const getAll = async (req, res) => {
       const diff = currentMomentStartOfDay.diff(finishTrainingDate, 'days');
 
       if (diff > 0) {
+        const book = await Book.findOne({ _id: result.bookId, owner });
         try {
+          if (book) {
+            book.status = 'done';
+            await book.save();
+          } else {
+            return res.status(404).json({ message: 'Book not found' });
+          }
           await Training.deleteOne({ _id: result._id });
           return res
             .status(200)
