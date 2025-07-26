@@ -82,10 +82,15 @@ const statistic = async (req, res) => {
   }
 
   if (currentMomentStartOfDay.isAfter(finishTrainingDate.endOf('day'))) {
-    await Training.deleteOne({ _id: id });
-    return res.status(200).json({
-      message: 'Time is up, training is over',
-    });
+    try {
+      await Training.deleteOne({ _id: id });
+      return res.status(200).json({ message: 'Time is up, training is over' });
+    } catch (error) {
+      console.error('Error deleting expired training:', error);
+      return res
+        .status(500)
+        .json({ message: 'Internal server error during training cleanup' });
+    }
   }
 
   if (allBooksDone) {
