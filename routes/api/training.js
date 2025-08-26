@@ -19,11 +19,18 @@ router.get('/', authenticate, ctrlWrapper(ctrl.getAll));
 router.post('/', authenticate, ctrlWrapper(ctrl.create));
 
 router.patch(
-  "/:id",
+  '/:id/statistic',
+  authenticate,
+  isValidId,
+  ctrlWrapper(ctrl.statistic),
+);
+
+router.post(
+  '/:id/complete',
   authenticate,
   isValidId,
   validationBody(schemasTraining.statisticTrainingSchema),
-  ctrlWrapper(ctrl.statistic)
+  ctrlWrapper(ctrl.completeTraining),
 );
 
 module.exports = router;
