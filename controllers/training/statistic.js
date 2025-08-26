@@ -60,6 +60,10 @@ const statistic = async (req, res) => {
   training.factPages += pages;
   const updatedTraining = await training.save();
 
+  if (thisBook.readPages >= thisBook.totalPages) {
+    updatedTraining.message = 'Congratulations! Another book finished.';
+  }
+
   return res.status(201).json(updatedTraining);
 };
 
