@@ -6,7 +6,7 @@ const moment = require('moment');
 
 const create = async (req, res) => {
   const { _id: owner } = req.user;
-  const { books: booksToTrain, startDate, finishDate } = req.body;  
+  const { books: booksToTrain, startDate, finishDate } = req.body;
 
   const findBooks = await Book.find({ owner });
 
@@ -26,20 +26,22 @@ const create = async (req, res) => {
   const days = finish.diff(start, 'days');
 
   const plannedPages = Math.round(totalPages / days);
-  const noTraining = await Training.find({owner});
-  if(noTraining.length !== 0){
-    throw RequestError(409,`Training already exist!`);
-  } else{
-  const training = await Training.create({
-    startDate: startDate.replace(/[.]/g, ''),
-    finishDate: finishDate.replace(/[.]/g, ''),
-    books: books,
-    owner: owner,
-    date: String(days),
-    plannedPages: plannedPages,
-    totalPages: totalPages,
-  });
-  res.status(201).json(training);}
+  const noTraining = await Training.find({ owner });
+  if (noTraining.length !== 0) {
+    throw RequestError(409, `Training already exist!`);
+  } else {
+    const training = await Training.create({
+      startDate: startDate.replace(/[.]/g, ''),
+      finishDate: finishDate.replace(/[.]/g, ''),
+      books: books,
+      owner: owner,
+      date: String(days),
+      plannedPages: plannedPages,
+      totalPages: totalPages,
+      inProgress: true,
+    });
+    res.status(201).json(training);
+  }
 };
 
 module.exports = create;
